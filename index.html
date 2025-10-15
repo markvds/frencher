@@ -1,159 +1,751 @@
 <!DOCTYPE html>
-items(){
-    this.clampPage()
-},
-direction(){
-    this.resetStates()
-},
-methods:{
-    promptText(row){
-        return this.direction==='nl-fr' ? row.nl : row.fr
-    },
-    targetText(row){
-        return this.direction==='nl-fr' ? row.fr : row.nl
-    },
-    firstLetterHint(row){
-        const t = this.targetText(row).trim()
-        return t ? t[0] : ''
-    },
-    parseCSV(){
-        this.error = ''
-        const text = this.csvText.trim()
-        if(!text){
-            this.items = []
-            return
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frencher - Woordentrainer</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: #f5f5f5;
+            color: #1f2933;
         }
-        const lines = text.split(/\r?\n/).filter(l=>l.trim().length)
-        if(!lines.length){
-            this.items=[]
-            return
+
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #f0f4ff 0%, #f9fafb 100%);
+            min-height: 100vh;
         }
-        const delim = detectDelimiter(lines[0])
-        const out = []
-        for(let i=0;i<lines.length;i++){
-            const raw = lines[i]
-            const parts = raw.split(delim)
-            if(parts.length < 2){
-                continue
+
+        * {
+            box-sizing: border-box;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .app {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 4rem;
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 2.75rem);
+            color: #1d4ed8;
+        }
+
+        header p {
+            margin: 0;
+            color: #4a5568;
+            max-width: 60ch;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 18px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(6px);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.35rem;
+            color: #1d4ed8;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 160px;
+            padding: 0.85rem;
+            font-size: 0.95rem;
+            border: 1px solid #cbd5f5;
+            border-radius: 12px;
+            resize: vertical;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        textarea:focus,
+        input:focus,
+        select:focus,
+        button:focus {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .file-input {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .file-input input[type="file"] {
+            padding: 0.35rem;
+            border: 1px dashed #94a3b8;
+            border-radius: 10px;
+            background: rgba(148, 163, 184, 0.12);
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: none;
+            border-radius: 9999px;
+            padding: 0.55rem 1.15rem;
+            background: #2563eb;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+            box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
+        }
+
+        .button.secondary {
+            background: #e2e8f0;
+            color: #1f2937;
+            box-shadow: none;
+        }
+
+        .button.ghost {
+            background: transparent;
+            color: #2563eb;
+            box-shadow: none;
+        }
+
+        .button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        .button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 24px rgba(37, 99, 235, 0.28);
+        }
+
+        .settings-grid {
+            display: grid;
+            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .settings-group label {
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .settings-group input[type="number"],
+        .settings-group select {
+            padding: 0.6rem 0.75rem;
+            border: 1px solid #cbd5f5;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .practice-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: rgba(37, 99, 235, 0.08);
+            color: #1e3a8a;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            font-size: 0.95rem;
+            vertical-align: top;
+        }
+
+        thead {
+            background: rgba(37, 99, 235, 0.08);
+            color: #1e3a8a;
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(241, 245, 249, 0.6);
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .state-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-radius: 999px;
+            padding: 0.25rem 0.65rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .state-correct {
+            background: rgba(22, 163, 74, 0.16);
+            color: #166534;
+        }
+
+        .state-wrong {
+            background: rgba(220, 38, 38, 0.14);
+            color: #b91c1c;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .error {
+            margin-top: 0.75rem;
+            color: #b91c1c;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            padding: 3rem 1.5rem;
+            text-align: center;
+            color: #64748b;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .file-name {
+            font-size: 0.85rem;
+            color: #475569;
+        }
+
+        @media (max-width: 720px) {
+            .controls-row {
+                flex-direction: column;
+                align-items: stretch;
             }
-            const nl = parts[0].trim()
-            const fr = parts.slice(1).join(delim).trim()
-            if(!nl || !fr) continue
-            out.push({ id: i+1+"-"+Math.random().toString(36).slice(2,7), nl, fr, user:'', state:null, revealed:false })
-        }
-        if(!out.length){
-            this.error = 'Kon geen geldige regels vinden (verwacht: Nederlands,Frans)'
-            return
-        }
-        this.items = out
-        this.page = 0
-        this.resetStates()
-    },
-    shuffleAll(){
-        this.items = shuffleInPlace([...this.items])
-        this.page = 0
-        this.resetStates()
-    },
-    checkSingle(row){
-        const target = this.targetText(row)
-        const opts = acceptableMatches(target)
-        const userN = normalize(row.user, this.strictSpacing)
-        const ok = opts.some(opt => normalize(opt, this.strictSpacing) === userN)
-        row.state = ok ? 'correct' : 'wrong'
-        if(this.canAdvance){
-            playSuccess()
-        }
-    },
-    checkAllPage(){
-        this.pageItems.forEach(r => {
-            if(!r.user) {
-                r.state = 'wrong'
-                return
+
+            .button {
+                width: 100%;
+                justify-content: center;
             }
-            this.checkSingle(r)
-        })
-        if(this.canAdvance){
-            playSuccess()
-        }
-    },
-    reveal(row){
-        row.revealed = true
-    },
-    resetPage(){
-        this.pageItems.forEach(r => {
-            r.user=''
-            r.state=null
-            r.revealed=false
-        })
-    },
-    resetStates(){
-        this.items.forEach(r => {
-            r.state=null
-            r.revealed=false
-        })
-    },
-    nextPage(){
-        if(this.page < this.totalPages-1 && this.canAdvance){
-            this.page++
-            this.resetStates()
-        }
-    },
-    prevPage(){
-        if(this.page>0){
-            this.page--
-            this.resetStates()
-        }
-    },
-    clampPage(){
-        this.page = Math.min(this.page, this.totalPages-1)
-    },
-    saveToLocal(){
-        try{
-            localStorage.setItem('vocab_csv', this.csvText)
-            localStorage.setItem('vocab_settings', JSON.stringify({perPage:this.perPage, passThreshold:this.passThreshold, direction:this.direction, showHints:this.showHints, strictSpacing:this.strictSpacing}))
-        }catch(e){}
-    },
-    loadFromLocal(){
-        try{
-            const t = localStorage.getItem('vocab_csv')
-            if(t!==null) this.csvText = t
-            const s = localStorage.getItem('vocab_settings')
-            if(s){
-                const obj = JSON.parse(s)
-                Object.assign(this, obj)
+
+            table {
+                font-size: 0.9rem;
             }
-        }catch(e){}
-    },
-    clearLocal(){
-        try{
-            localStorage.removeItem('vocab_csv')
-            localStorage.removeItem('vocab_settings')
-        }catch(e){}
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="app">
+    <header>
+        <h1>Frencher</h1>
+        <p>Oefen je Nederlandse en Franse woordenschat. Upload een CSV of plak woorden in het tekstvak, controleer je antwoorden en luister na elke juiste gok naar de Franse uitspraak.</p>
+    </header>
+
+    <section class="card">
+        <h2>Woordenlijst</h2>
+        <div class="field">
+            <label for="csv-text">Plak hier je CSV (Nederlands, Frans)</label>
+            <textarea id="csv-text" v-model="csvText" placeholder="bijv. hallo,bonjour"></textarea>
+        </div>
+        <div class="controls-row" style="margin-top: 1rem;">
+            <div class="file-input">
+                <label class="button secondary" for="csv-upload">CSV uploaden</label>
+                <input id="csv-upload" type="file" accept=".csv,text/csv" @change="handleFileUpload">
+                <span class="file-name" v-if="csvFileName">Geselecteerd: {{ csvFileName }}</span>
+            </div>
+            <button class="button" @click="parseCSV">Laden</button>
+            <button class="button secondary" @click="shuffleAll" :disabled="!items.length">Schudden</button>
+            <button class="button ghost" @click="useDemo">Voorbeeld laden</button>
+            <button class="button ghost" @click="clearLocal">Lokale opslag wissen</button>
+        </div>
+        <p class="error" v-if="error">{{ error }}</p>
+    </section>
+
+    <section class="card">
+        <h2>Instellingen</h2>
+        <div class="settings-grid">
+            <div class="settings-group">
+                <label>Richting</label>
+                <div class="toggle">
+                    <label><input type="radio" value="nl-fr" v-model="direction"> Nederlands → Frans</label>
+                </div>
+                <div class="toggle">
+                    <label><input type="radio" value="fr-nl" v-model="direction"> Frans → Nederlands</label>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label for="per-page">Woorden per pagina</label>
+                <input id="per-page" type="number" min="1" max="50" v-model.number="perPage">
+            </div>
+            <div class="settings-group">
+                <label for="threshold">Slaaggrens (%)</label>
+                <input id="threshold" type="number" min="10" max="100" step="5" v-model.number="passThreshold">
+            </div>
+            <div class="settings-group">
+                <label>Hulpmiddelen</label>
+                <div class="toggle"><label><input type="checkbox" v-model="showHints"> Toon eerste letter</label></div>
+                <div class="toggle"><label><input type="checkbox" v-model="strictSpacing"> Strikte spatiëring</label></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card practice-card">
+        <h2>Oefenen</h2>
+        <div v-if="!items.length" class="empty-state">
+            <p>Upload of plak eerst een woordenlijst om te beginnen.</p>
+        </div>
+        <template v-else>
+            <div class="status-bar">
+                <span>Pagina {{ page + 1 }} van {{ totalPages }}</span>
+                <span>Score op deze pagina: {{ pageCorrectCount }} / {{ pageItems.length }} ({{ pageSuccessRate }}%)</span>
+            </div>
+
+            <table>
+                <thead>
+                <tr>
+                    <th>Vraag</th>
+                    <th>Jouw antwoord</th>
+                    <th v-if="showHints">Hint</th>
+                    <th>Acties</th>
+                    <th>Resultaat</th>
+                    <th>Oplossing</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="row in pageItems" :key="row.id">
+                    <td>{{ promptText(row) }}</td>
+                    <td>
+                        <input type="text" v-model="row.user" @keyup.enter="checkSingle(row)" placeholder="Typ je antwoord" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5f5;">
+                    </td>
+                    <td v-if="showHints" class="hint">{{ firstLetterHint(row) }}</td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="button secondary" @click="checkSingle(row)">Controleer</button>
+                            <button class="button ghost" @click="reveal(row)">Toon</button>
+                        </div>
+                    </td>
+                    <td>
+                        <span v-if="row.state==='correct'" class="state-pill state-correct">Correct</span>
+                        <span v-else-if="row.state==='wrong'" class="state-pill state-wrong">Onjuist</span>
+                    </td>
+                    <td>{{ row.revealed ? targetText(row) : '' }}</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="status-bar" style="background: transparent; padding-top: 0;">
+                <div class="controls-row">
+                    <button class="button" @click="checkAllPage" :disabled="!pageItems.length">Controleer pagina</button>
+                    <button class="button secondary" @click="resetPage" :disabled="!pageItems.length">Reset pagina</button>
+                    <button class="button ghost" @click="saveToLocal">Bewaar lokaal</button>
+                </div>
+                <div class="pagination">
+                    <button class="button secondary" @click="prevPage" :disabled="page===0">Vorige</button>
+                    <button class="button secondary" @click="nextPage" :disabled="page>=totalPages-1 || !canAdvance">Volgende</button>
+                </div>
+            </div>
+        </template>
+    </section>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp } = Vue;
+
+function detectDelimiter(line) {
+    const counts = [',', ';', '\t', '|'].map(delim => ({ delim, count: (line.match(new RegExp(escapeRegExp(delim), 'g')) || []).length }));
+    counts.sort((a, b) => b.count - a.count);
+    return counts[0].count > 0 ? counts[0].delim : ',';
+}
+
+function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function acceptableMatches(text) {
+    if (!text) return [];
+    const cleaned = text
+        .split('|')
+        .map(part => part.split('/'))
+        .flat()
+        .map(part => part.replace(/\(.*?\)|\[.*?\]/g, '').trim())
+        .filter(Boolean);
+    return cleaned.length ? cleaned : [text.trim()];
+}
+
+function normalize(text, strictSpacing) {
+    if (!text) return '';
+    let result = text.toLowerCase().trim();
+    result = result.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    if (!strictSpacing) {
+        result = result.replace(/\s+/g, ' ');
     }
-},
-mounted(){
-    // Load demo silently on first mount for quick tryout
-    if(!localStorage.getItem('vocab_csv')){
-        this.useDemo()
-    } else {
-        this.loadFromLocal()
-        this.parseCSV()
+    return result;
+}
+
+function shuffleInPlace(list) {
+    for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+}
+
+let audioCtx;
+function playSuccess() {
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.32);
+    } catch (err) {
+        console.warn('Kon geen geluid afspelen:', err);
     }
 }
-,
-// Separate methods extension to keep mounted readable
-methodsExt: {}
-}).mount('#app')
 
-
-// Add demo method after mount to avoid hoisting issues
-document.addEventListener('DOMContentLoaded', () => {
-    const vm = document.querySelector('#app').__vue_app__._instance.proxy
-    vm.useDemo = function(){
-        vm.csvText = `hallo,bonjour\nhet huis,la maison\nkat,le chat | la chatte\nhond,le chien\nhet water,l'eau | eau\nboek,le livre\nappel,la pomme\nbrood,le pain\nschool,l'école | ecole\nnaar school,aller à l'école | aller a l'ecole\nhoe gaat het?,comment ça va ? | comment ca va\ndank je,merci\nalsjeblieft,s'il te plaît | s il te plait\nlinks,gauche\nrechts,droite`
-        vm.parseCSV()
+function speakFrenchWord(rawText) {
+    if (!('speechSynthesis' in window) || !rawText) {
+        return;
     }
-})
+    const base = acceptableMatches(rawText)[0] || rawText;
+    const cleaned = base.replace(/\s+/g, ' ').trim();
+    if (!cleaned) return;
+    const utterance = new SpeechSynthesisUtterance(cleaned);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 0.95;
+    try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    } catch (err) {
+        console.warn('Spraak afspelen mislukt:', err);
+    }
+}
+
+createApp({
+    data() {
+        return {
+            csvText: '',
+            csvFileName: '',
+            items: [],
+            page: 0,
+            perPage: 8,
+            passThreshold: 80,
+            direction: 'nl-fr',
+            showHints: false,
+            strictSpacing: false,
+            error: ''
+        };
+    },
+    computed: {
+        totalPages() {
+            if (!this.items.length) return 1;
+            return Math.max(1, Math.ceil(this.items.length / this.perPage));
+        },
+        pageItems() {
+            const start = this.page * this.perPage;
+            return this.items.slice(start, start + this.perPage);
+        },
+        pageCorrectCount() {
+            return this.pageItems.filter(row => row.state === 'correct').length;
+        },
+        pageSuccessRate() {
+            if (!this.pageItems.length) return 0;
+            return Math.round((this.pageCorrectCount / this.pageItems.length) * 100);
+        },
+        canAdvance() {
+            if (!this.pageItems.length) return false;
+            return (this.pageCorrectCount / this.pageItems.length) * 100 >= this.passThreshold;
+        }
+    },
+    watch: {
+        items() {
+            this.clampPage();
+        },
+        direction() {
+            this.resetStates();
+            this.saveToLocal();
+        },
+        perPage() {
+            if (this.perPage < 1) this.perPage = 1;
+            this.clampPage();
+            this.saveToLocal();
+        },
+        passThreshold() {
+            if (this.passThreshold < 0) this.passThreshold = 0;
+            if (this.passThreshold > 100) this.passThreshold = 100;
+            this.saveToLocal();
+        },
+        showHints() {
+            this.saveToLocal();
+        },
+        strictSpacing() {
+            this.saveToLocal();
+        }
+    },
+    methods: {
+        promptText(row) {
+            return this.direction === 'nl-fr' ? row.nl : row.fr;
+        },
+        targetText(row) {
+            return this.direction === 'nl-fr' ? row.fr : row.nl;
+        },
+        firstLetterHint(row) {
+            const text = this.targetText(row).trim();
+            if (!text) return '';
+            return text[0];
+        },
+        handleFileUpload(event) {
+            const input = event.target;
+            const file = input.files && input.files[0];
+            if (!file) return;
+            this.csvFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = () => {
+                this.csvText = reader.result || '';
+                this.parseCSV();
+            };
+            reader.onerror = () => {
+                this.error = 'Kon het bestand niet lezen.';
+            };
+            reader.onloadend = () => {
+                input.value = '';
+            };
+            reader.readAsText(file, 'utf-8');
+        },
+        parseCSV() {
+            this.error = '';
+            const text = this.csvText.trim();
+            if (!text) {
+                this.items = [];
+                this.saveToLocal();
+                return;
+            }
+            const lines = text.split(/\r?\n/).filter(line => line.trim().length);
+            if (!lines.length) {
+                this.items = [];
+                this.error = 'Geen geldige regels gevonden.';
+                return;
+            }
+            const delimiter = detectDelimiter(lines[0]);
+            const parsed = [];
+            for (let i = 0; i < lines.length; i++) {
+                const raw = lines[i];
+                const parts = raw.split(delimiter);
+                if (parts.length < 2) continue;
+                const nl = (parts[0] || '').trim();
+                const fr = parts.slice(1).join(delimiter).trim();
+                if (!nl || !fr) continue;
+                parsed.push({
+                    id: `${i + 1}-${Math.random().toString(36).slice(2, 7)}`,
+                    nl,
+                    fr,
+                    user: '',
+                    state: null,
+                    revealed: false
+                });
+            }
+            if (!parsed.length) {
+                this.error = 'Kon geen geldige regels vinden (verwacht: Nederlands, Frans).';
+                this.items = [];
+                return;
+            }
+            this.items = parsed;
+            this.page = 0;
+            this.resetStates();
+            this.saveToLocal();
+        },
+        shuffleAll() {
+            if (!this.items.length) return;
+            this.items = shuffleInPlace([...this.items]);
+            this.page = 0;
+            this.resetStates();
+        },
+        checkSingle(row) {
+            const target = this.targetText(row);
+            const options = acceptableMatches(target);
+            const userNormalized = normalize(row.user, this.strictSpacing);
+            const wasCorrect = row.state === 'correct';
+            const isCorrect = options.some(opt => normalize(opt, this.strictSpacing) === userNormalized);
+            row.state = isCorrect ? 'correct' : 'wrong';
+            if (isCorrect && !wasCorrect) {
+                speakFrenchWord(row.fr);
+            }
+            if (this.canAdvance) {
+                playSuccess();
+            }
+        },
+        checkAllPage() {
+            this.pageItems.forEach(row => {
+                if (!row.user) {
+                    row.state = 'wrong';
+                    return;
+                }
+                this.checkSingle(row);
+            });
+            if (this.canAdvance) {
+                playSuccess();
+            }
+        },
+        reveal(row) {
+            row.revealed = true;
+        },
+        resetPage() {
+            this.pageItems.forEach(row => {
+                row.user = '';
+                row.state = null;
+                row.revealed = false;
+            });
+        },
+        resetStates() {
+            this.items.forEach(row => {
+                row.state = null;
+                row.revealed = false;
+            });
+        },
+        nextPage() {
+            if (this.page < this.totalPages - 1 && this.canAdvance) {
+                this.page += 1;
+                this.resetStates();
+            }
+        },
+        prevPage() {
+            if (this.page > 0) {
+                this.page -= 1;
+                this.resetStates();
+            }
+        },
+        clampPage() {
+            if (this.page >= this.totalPages) {
+                this.page = Math.max(0, this.totalPages - 1);
+            }
+        },
+        saveToLocal() {
+            try {
+                localStorage.setItem('vocab_csv', this.csvText);
+                localStorage.setItem('vocab_settings', JSON.stringify({
+                    perPage: this.perPage,
+                    passThreshold: this.passThreshold,
+                    direction: this.direction,
+                    showHints: this.showHints,
+                    strictSpacing: this.strictSpacing
+                }));
+            } catch (err) {
+                console.warn('Opslaan mislukt:', err);
+            }
+        },
+        loadFromLocal() {
+            try {
+                const storedCsv = localStorage.getItem('vocab_csv');
+                if (storedCsv !== null) {
+                    this.csvText = storedCsv;
+                    this.parseCSV();
+                }
+                const storedSettings = localStorage.getItem('vocab_settings');
+                if (storedSettings) {
+                    const parsed = JSON.parse(storedSettings);
+                    Object.assign(this, parsed);
+                }
+            } catch (err) {
+                console.warn('Lokaal laden mislukt:', err);
+            }
+        },
+        clearLocal() {
+            try {
+                localStorage.removeItem('vocab_csv');
+                localStorage.removeItem('vocab_settings');
+                this.csvFileName = '';
+            } catch (err) {
+                console.warn('Kon lokale opslag niet legen:', err);
+            }
+        },
+        useDemo() {
+            this.csvText = `hallo,bonjour\nhet huis,la maison\nkat,le chat | la chatte\nhond,le chien\nhet water,l'eau | eau\nboek,le livre\nappel,la pomme\nbrood,le pain\nschool,l'école | ecole\nnaar school,aller à l'école | aller a l'ecole\nhoe gaat het?,comment ça va ? | comment ca va\ndank je,merci\nalsjeblieft,s'il te plaît | s il te plait\nlinks,gauche\nrechts,droite`;
+            this.csvFileName = '';
+            this.parseCSV();
+        }
+    },
+    mounted() {
+        if (!localStorage.getItem('vocab_csv')) {
+            this.useDemo();
+        } else {
+            this.loadFromLocal();
+        }
+        this.$watch('csvText', () => this.saveToLocal());
+    }
+}).mount('#app');
 </script>
 </body>
 </html>
