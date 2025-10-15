@@ -369,7 +369,7 @@
                 <tr>
                     <th>Vraag</th>
                     <th>Jouw antwoord</th>
-                    <th v-if="showHints">Hint</th>
+                    <th>Hint</th>
                     <th>Acties</th>
                     <th>Resultaat</th>
                     <th>Oplossing</th>
@@ -381,11 +381,15 @@
                     <td>
                         <input type="text" v-model="row.user" @keyup.enter="checkSingle(row)" placeholder="Typ je antwoord" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5f5;">
                     </td>
-                    <td v-if="showHints" class="hint">{{ firstLetterHint(row) }}</td>
+                    <td class="hint">
+                        <div v-if="showHints">Eerste letter: {{ firstLetterHint(row) }}</div>
+                        <div v-if="row.hint">{{ row.hint }}</div>
+                    </td>
                     <td>
                         <div class="row-actions">
                             <button class="button secondary" @click="checkSingle(row)">Controleer</button>
                             <button class="button ghost" @click="reveal(row)">Toon</button>
+                            <button class="button ghost" @click="showHint(row)">Hint</button>
                         </div>
                     </td>
                     <td>
@@ -440,6 +444,8 @@ function acceptableMatches(text) {
 function normalize(text, strictSpacing) {
     if (!text) return '';
     let result = text.toLowerCase().trim();
+    result = result.replace(/["'`´‘’‚‛“”„‟]/g, "'");
+    result = result.replace(/'+/g, "'");
     result = result.normalize('NFD').replace(/\p{Diacritic}/gu, '');
     if (!strictSpacing) {
         result = result.replace(/\s+/g, ' ');
@@ -453,6 +459,14 @@ function shuffleInPlace(list) {
         [list[i], list[j]] = [list[j], list[i]];
     }
     return list;
+}
+
+function scrambleFrenchWord(rawText) {
+    if (!rawText) return '';
+    const base = acceptableMatches(rawText)[0] || rawText;
+    const letters = Array.from(base.replace(/\s+/g, ''));
+    if (!letters.length) return '';
+    return shuffleInPlace([...letters]).join('');
 }
 
 let audioCtx;
@@ -567,6 +581,9 @@ createApp({
             if (!text) return '';
             return text[0];
         },
+        showHint(row) {
+            row.hint = scrambleFrenchWord(row.fr);
+        },
         handleFileUpload(event) {
             const input = event.target;
             const file = input.files && input.files[0];
@@ -614,7 +631,8 @@ createApp({
                     fr,
                     user: '',
                     state: null,
-                    revealed: false
+                    revealed: false,
+                    hint: ''
                 });
             }
             if (!parsed.length) {
@@ -667,12 +685,14 @@ createApp({
                 row.user = '';
                 row.state = null;
                 row.revealed = false;
+                row.hint = '';
             });
         },
         resetStates() {
             this.items.forEach(row => {
                 row.state = null;
                 row.revealed = false;
+                row.hint = '';
             });
         },
         nextPage() {
