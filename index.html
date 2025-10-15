@@ -1,76 +1,144 @@
 <!DOCTYPE html>
-items(){ this.clampPage() },
-direction(){ this.resetStates() }
+items(){
+    this.clampPage()
+},
+direction(){
+    this.resetStates()
 },
 methods:{
-promptText(row){ return this.direction==='nl-fr' ? row.nl : row.fr },
-targetText(row){ return this.direction==='nl-fr' ? row.fr : row.nl },
-firstLetterHint(row){
-const t = this.targetText(row).trim()
-return t ? t[0] : ''
-},
-parseCSV(){
-this.error = ''
-const text = this.csvText.trim()
-if(!text){ this.items = []; return }
-const lines = text.split(/\r?\n/).filter(l=>l.trim().length)
-if(!lines.length){ this.items=[]; return }
-const delim = detectDelimiter(lines[0])
-const out = []
-for(let i=0;i<lines.length;i++){
-const raw = lines[i]
-const parts = raw.split(delim)
-if(parts.length < 2){ continue }
-const nl = parts[0].trim()
-const fr = parts.slice(1).join(delim).trim()
-if(!nl || !fr) continue
-out.push({ id: i+1+"-"+Math.random().toString(36).slice(2,7), nl, fr, user:'', state:null, revealed:false })
-}
-if(!out.length){ this.error = 'Kon geen geldige regels vinden (verwacht: Nederlands,Frans)'; return }
-this.items = out
-this.page = 0
-this.resetStates()
-},
-shuffleAll(){
-this.items = shuffleInPlace([...this.items])
-this.page = 0
-this.resetStates()
-},
-checkSingle(row){
-const target = this.targetText(row)
-const opts = acceptableMatches(target)
-const userN = normalize(row.user, this.strictSpacing)
-const ok = opts.some(opt => normalize(opt, this.strictSpacing) === userN)
-row.state = ok ? 'correct' : 'wrong'
-if(this.canAdvance){ playSuccess() }
-},
-checkAllPage(){
-this.pageItems.forEach(r => {
-if(!r.user) { r.state = 'wrong'; return }
-this.checkSingle(r)
-})
-if(this.canAdvance){ playSuccess() }
-},
-reveal(row){ row.revealed = true },
-resetPage(){ this.pageItems.forEach(r => { r.user=''; r.state=null; r.revealed=false }) },
-resetStates(){ this.items.forEach(r => { r.state=null; r.revealed=false }) },
-nextPage(){ if(this.page < this.totalPages-1 && this.canAdvance){ this.page++; this.resetStates() } },
-prevPage(){ if(this.page>0){ this.page--; this.resetStates() } },
-clampPage(){ this.page = Math.min(this.page, this.totalPages-1) },
-saveToLocal(){
-try{ localStorage.setItem('vocab_csv', this.csvText); localStorage.setItem('vocab_settings', JSON.stringify({perPage:this.perPage, passThreshold:this.passThreshold, direction:this.direction, showHints:this.showHints, strictSpacing:this.strictSpacing})) }catch(e){}
-},
-loadFromLocal(){
-try{
-const t = localStorage.getItem('vocab_csv'); if(t!==null) this.csvText = t
-const s = localStorage.getItem('vocab_settings'); if(s){ const obj = JSON.parse(s); Object.assign(this, obj) }
-}catch(e){}
-},
-clearLocal(){ try{ localStorage.removeItem('vocab_csv'); localStorage.removeItem('vocab_settings') }catch(e){} }
+    promptText(row){
+        return this.direction==='nl-fr' ? row.nl : row.fr
+    },
+    targetText(row){
+        return this.direction==='nl-fr' ? row.fr : row.nl
+    },
+    firstLetterHint(row){
+        const t = this.targetText(row).trim()
+        return t ? t[0] : ''
+    },
+    parseCSV(){
+        this.error = ''
+        const text = this.csvText.trim()
+        if(!text){
+            this.items = []
+            return
+        }
+        const lines = text.split(/\r?\n/).filter(l=>l.trim().length)
+        if(!lines.length){
+            this.items=[]
+            return
+        }
+        const delim = detectDelimiter(lines[0])
+        const out = []
+        for(let i=0;i<lines.length;i++){
+            const raw = lines[i]
+            const parts = raw.split(delim)
+            if(parts.length < 2){
+                continue
+            }
+            const nl = parts[0].trim()
+            const fr = parts.slice(1).join(delim).trim()
+            if(!nl || !fr) continue
+            out.push({ id: i+1+"-"+Math.random().toString(36).slice(2,7), nl, fr, user:'', state:null, revealed:false })
+        }
+        if(!out.length){
+            this.error = 'Kon geen geldige regels vinden (verwacht: Nederlands,Frans)'
+            return
+        }
+        this.items = out
+        this.page = 0
+        this.resetStates()
+    },
+    shuffleAll(){
+        this.items = shuffleInPlace([...this.items])
+        this.page = 0
+        this.resetStates()
+    },
+    checkSingle(row){
+        const target = this.targetText(row)
+        const opts = acceptableMatches(target)
+        const userN = normalize(row.user, this.strictSpacing)
+        const ok = opts.some(opt => normalize(opt, this.strictSpacing) === userN)
+        row.state = ok ? 'correct' : 'wrong'
+        if(this.canAdvance){
+            playSuccess()
+        }
+    },
+    checkAllPage(){
+        this.pageItems.forEach(r => {
+            if(!r.user) {
+                r.state = 'wrong'
+                return
+            }
+            this.checkSingle(r)
+        })
+        if(this.canAdvance){
+            playSuccess()
+        }
+    },
+    reveal(row){
+        row.revealed = true
+    },
+    resetPage(){
+        this.pageItems.forEach(r => {
+            r.user=''
+            r.state=null
+            r.revealed=false
+        })
+    },
+    resetStates(){
+        this.items.forEach(r => {
+            r.state=null
+            r.revealed=false
+        })
+    },
+    nextPage(){
+        if(this.page < this.totalPages-1 && this.canAdvance){
+            this.page++
+            this.resetStates()
+        }
+    },
+    prevPage(){
+        if(this.page>0){
+            this.page--
+            this.resetStates()
+        }
+    },
+    clampPage(){
+        this.page = Math.min(this.page, this.totalPages-1)
+    },
+    saveToLocal(){
+        try{
+            localStorage.setItem('vocab_csv', this.csvText)
+            localStorage.setItem('vocab_settings', JSON.stringify({perPage:this.perPage, passThreshold:this.passThreshold, direction:this.direction, showHints:this.showHints, strictSpacing:this.strictSpacing}))
+        }catch(e){}
+    },
+    loadFromLocal(){
+        try{
+            const t = localStorage.getItem('vocab_csv')
+            if(t!==null) this.csvText = t
+            const s = localStorage.getItem('vocab_settings')
+            if(s){
+                const obj = JSON.parse(s)
+                Object.assign(this, obj)
+            }
+        }catch(e){}
+    },
+    clearLocal(){
+        try{
+            localStorage.removeItem('vocab_csv')
+            localStorage.removeItem('vocab_settings')
+        }catch(e){}
+    }
 },
 mounted(){
-// Load demo silently on first mount for quick tryout
-if(!localStorage.getItem('vocab_csv')){ this.useDemo() } else { this.loadFromLocal(); this.parseCSV() }
+    // Load demo silently on first mount for quick tryout
+    if(!localStorage.getItem('vocab_csv')){
+        this.useDemo()
+    } else {
+        this.loadFromLocal()
+        this.parseCSV()
+    }
 }
 ,
 // Separate methods extension to keep mounted readable
@@ -80,11 +148,11 @@ methodsExt: {}
 
 // Add demo method after mount to avoid hoisting issues
 document.addEventListener('DOMContentLoaded', () => {
-const vm = document.querySelector('#app').__vue_app__._instance.proxy
-vm.useDemo = function(){
-vm.csvText = `hallo,bonjour\nhet huis,la maison\nkat,le chat | la chatte\nhond,le chien\nhet water,l'eau | eau\nboek,le livre\nappel,la pomme\nbrood,le pain\nschool,l'école | ecole\nnaar school,aller à l'école | aller a l'ecole\nhoe gaat het?,comment ça va ? | comment ca va\ndank je,merci\nalsjeblieft,s'il te plaît | s il te plait\nlinks,gauche\nrechts,droite`
-vm.parseCSV()
-}
+    const vm = document.querySelector('#app').__vue_app__._instance.proxy
+    vm.useDemo = function(){
+        vm.csvText = `hallo,bonjour\nhet huis,la maison\nkat,le chat | la chatte\nhond,le chien\nhet water,l'eau | eau\nboek,le livre\nappel,la pomme\nbrood,le pain\nschool,l'école | ecole\nnaar school,aller à l'école | aller a l'ecole\nhoe gaat het?,comment ça va ? | comment ca va\ndank je,merci\nalsjeblieft,s'il te plaît | s il te plait\nlinks,gauche\nrechts,droite`
+        vm.parseCSV()
+    }
 })
 </script>
 </body>
